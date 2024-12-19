@@ -82,7 +82,15 @@ function App() {
   return (
     <div>
       <p>time remaining</p>
-      <p style={{ fontSize: "32px", marginBottom: "24px" }}>{seconds}s</p>
+      <p
+        style={{
+          fontSize: "32px",
+          marginBottom: "24px",
+          color: remainingMs > 10000 ? "white" : "red",
+        }}
+      >
+        {seconds}s
+      </p>
       <button
         onClick={handleReset}
         style={{
