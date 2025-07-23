@@ -1,9 +1,11 @@
 import React from "react";
 import "./App.css";
-import { getRandomEnabledKey, keyboardCharacters } from "./keyboardCharacters";
+import { keyboardCharacters } from "./keyboardCharacters";
+import { getRandomSentence } from "./sentences";
 
 function App() {
-  const [randomKey, setRandomKey] = React.useState<string>();
+  const [currentSentence, setCurrentSentence] = React.useState<string>("");
+  const [currentPosition, setCurrentPosition] = React.useState<number>(0);
   const [selectedIncorrectKey, setSelectedIncorrectKey] = React.useState("");
   const [score, setScore] = React.useState(0);
   const [streak, setStreak] = React.useState(0);
@@ -44,17 +46,30 @@ function App() {
   }, [isTimerRunning, endTime]);
 
   const seconds = (remainingMs / 1000).toFixed(2);
+  const currentChar = currentSentence[currentPosition];
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isTimerRunning) return;
+      
+      const expectedChar = currentSentence[currentPosition];
+      if (!expectedChar) return; // No more characters to type
 
-      if (randomKey && event.key.toLowerCase() === randomKey.toLowerCase()) {
+      if (event.key === expectedChar) {
         setScore((prev) => prev + 1);
         setStreak((prev) => prev + 1);
         setSelectedIncorrectKey("");
         setTimeline((prev) => [...prev, "y"]);
-        setRandomKey(getRandomEnabledKey());
+        
+        const nextPosition = currentPosition + 1;
+        if (nextPosition >= currentSentence.length) {
+          // Sentence completed, get a new one
+          const newSentence = getRandomSentence();
+          setCurrentSentence(newSentence);
+          setCurrentPosition(0);
+        } else {
+          setCurrentPosition(nextPosition);
+        }
       } else {
         setSelectedIncorrectKey(event.key);
         setStreak(0);
@@ -66,7 +81,7 @@ function App() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [randomKey, isTimerRunning]);
+  }, [currentSentence, currentPosition, isTimerRunning]);
 
   const handleReset = () => {
     setEndTime(Date.now() + 60000); // Set a new end time 60 seconds from now
@@ -76,7 +91,9 @@ function App() {
     setStreak(0);
     setWrongCount(0);
     setTimeline([]);
-    setRandomKey(getRandomEnabledKey());
+    const newSentence = getRandomSentence();
+    setCurrentSentence(newSentence);
+    setCurrentPosition(0);
   };
 
   return (
@@ -100,6 +117,32 @@ function App() {
       >
         Start
       </button>
+      
+      {/* Sentence display */}
+      {currentSentence && (
+        <div style={{ 
+          marginBottom: "24px", 
+          fontSize: "24px", 
+          padding: "16px",
+          backgroundColor: "#1a1a1a",
+          borderRadius: "8px",
+          maxWidth: "800px",
+          margin: "0 auto 24px auto"
+        }}>
+          {currentSentence.split('').map((char, index) => (
+            <span
+              key={index}
+              style={{
+                backgroundColor: index === currentPosition ? "#a0ffab" : "transparent",
+                color: index < currentPosition ? "#888" : index === currentPosition ? "#000" : "white",
+                padding: char === ' ' ? "0 4px" : "0 1px",
+              }}
+            >
+              {char}
+            </span>
+          ))}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "row", columnGap: "28px" }}>
         <div>
           <div
@@ -124,7 +167,7 @@ function App() {
                   <div
                     key={keyIndex}
                     className={
-                      key.key === randomKey
+                      key.key.toLowerCase() === currentChar?.toLowerCase()
                         ? "glow correct"
                         : key.key === selectedIncorrectKey
                         ? "glow incorrect"
